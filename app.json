@@ -37,7 +37,16 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "food-delivery-app",
+          "organization": "em-mf"
+        }
+      ],
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true,
