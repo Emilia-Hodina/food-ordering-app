@@ -102,6 +102,7 @@ interface SignInParams {
 }
 
 interface GetMenuParams {
-    category: string;
-    query: string;
+    category?: string;
+    query?: string;
+    limit?: number;
 }

@@ -1,12 +1,17 @@
 import {Account, Avatars, Client, Storage, Databases, Query, ID} from "react-native-appwrite";
-import {SignInParams, CreateUserParams, GetMenuParams} from "@/type";
+import {SignInParams, CreateUserParams, GetMenuParams, MenuItem, Category} from "@/type";
 
 export const appwriteConfig = {
     endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT!,
     projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID!,
     platform: "com.em.foodordering",
     databaseId: '6a493a6b00002343a467',
-    userCollectionId: 'user'
+    bucketId:'6a4e80ee001a68ef4445',
+    userCollectionId: 'user',
+    categoriesCollectionId: 'categories',
+    menuCollectionId: 'menu',
+    customizationsCollectionId: 'customizations',
+    menuCustomizationsCollectionId: 'menu_customizations',
 }
 
 export const client = new Client();
@@ -69,4 +74,36 @@ export const getCurrentUser = async () => {
     }
 }
 
+export const getMenu = async ({ category, query, limit }: GetMenuParams) => {
+    try {
+        const queries: string[] = [];
+
+        if(category) queries.push(Query.equal('categories', category));
+        if(query) queries.push(Query.search('name', query));
+        if(limit) queries.push(Query.limit(limit));
+
+        const menus = await databases.listDocuments(
+            appwriteConfig.databaseId,
+            appwriteConfig.menuCollectionId,
+            queries,
+        )
+
+        return menus.documents as unknown as MenuItem[];
+    } catch (e) {
+        throw new Error(e as string);
+    }
+}
+
+export const getCategories = async () => {
+    try {
+        const categories = await databases.listDocuments(
+                appwriteConfig.databaseId,
+                appwriteConfig.categoriesCollectionId,
+            )
+
+        return categories.documents as unknown as Category[];
+    } catch (e) {
+        throw new Error(e as string);
+    }
+}
 
