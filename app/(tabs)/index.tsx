@@ -1,69 +1,273 @@
-import {SafeAreaView} from "react-native-safe-area-context";
-import { FlatList, Image, Pressable, Text, TouchableOpacity, View} from "react-native";
-import {Fragment} from "react";
-import cn from 'clsx';
+import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Fragment, useEffect, useState } from "react";
+import { router } from "expo-router";
+import cn from "clsx";
 
 import CartButton from "@/components/CartButton";
-import {images, offers} from "@/constants";
-import * as Sentry from "@sentry/react-native";
+import { images, offers } from "@/constants";
+import { getCategories } from "@/lib/appwrite";
+import useAppwrite from "@/lib/useAppwrite";
 import useAuthStore from "@/store/auth.store";
 
 export default function Index() {
-    const {user}=useAuthStore();
-    console.log("USER: ", JSON.stringify(user, null, 2));
+  const { user } = useAuthStore();
+  const { data: categories } = useAppwrite({ fn: getCategories });
+  const [isAddressModalVisible, setIsAddressModalVisible] = useState(false);
 
-    return (
-        <SafeAreaView className="flex-1 bg-white">
-            <FlatList
-                data={offers}
-                renderItem={({ item, index }) => {
-                    const isEven = index % 2 === 0;
+  // Tipul adresei selectate
+  const [selectedAddressType, setSelectedAddressType] = useState<
+    "Home" | "Work"
+  >("Home");
 
-                    return (
-                        <View>
-                            <Pressable
-                                className={cn("offer-card", isEven ? 'flex-row-reverse' : 'flex-row')}
-                                style={{ backgroundColor: item.color }}
-                                android_ripple={{ color: "#fffff22"}}
-                            >
-                                {({ pressed }) => (
-                                    <Fragment>
-                                        <View className={"h-full w-1/2"}>
-                                            <Image source={item.image} className={"size-full"} resizeMode={"contain"} />
-                                        </View>
+  // Păstrăm selecția sincronizată când utilizatorul își actualizează profilul
+  useEffect(() => {
+    if (user?.address_home) {
+      setSelectedAddressType("Home");
+    } else if (user?.address_work) {
+      setSelectedAddressType("Work");
+    }
+  }, [user?.address_home, user?.address_work]);
 
-                                        <View className={cn("offer-card__info", isEven ? 'pl-10': 'pr-10')}>
-                                            <Text className="h1-bold text-white leading-tight">
-                                                {item.title}
-                                            </Text>
-                                            <Image
-                                                source={images.arrowRight}
-                                                className="size-10"
-                                                resizeMode="contain"
-                                                tintColor="#ffffff"
-                                            />
-                                        </View>
-                                    </Fragment>
-                                )}
-                            </Pressable>
-                        </View>
-                    )
-                }}
-                contentContainerClassName="pb-28 px-5"
-                ListHeaderComponent={() => (
-                    <View className="flex-between flex-row w-full my-5">
-                        <View className="flex-start">
-                            <Text className="small-bold text-primary">DELIVER TO</Text>
-                            <TouchableOpacity className="flex-center flex-row gap-x-1 mt-0.5">
-                                <Text className="paragraph-bold text-dark-100">Croatia</Text>
-                                <Image source={images.arrowDown} className="size-3" resizeMode="contain" />
-                            </TouchableOpacity>
-                        </View>
+  const hasAnyAddress = Boolean(user?.address_home || user?.address_work);
 
-                        <CartButton />
-                    </View>
-                )}
-            />
-        </SafeAreaView>
+  // Determinăm adresa activă
+  const activeAddress =
+    selectedAddressType === "Home"
+      ? user?.address_home || user?.address_work
+      : user?.address_work || user?.address_home;
+
+  // Textul și eticheta afișate în header
+  const displayText = hasAnyAddress ? activeAddress : "Add delivery address";
+  const displayLabel = hasAnyAddress
+    ? selectedAddressType === "Home" && user?.address_home
+      ? "Home"
+      : "Work"
+    : null;
+
+  const addressOptions = [
+    {
+      id: "home",
+      type: "Home" as const,
+      address: user?.address_home,
+      icon: images.location,
+    },
+    {
+      id: "work",
+      type: "Work" as const,
+      address: user?.address_work,
+      icon: images.location,
+    },
+  ];
+
+  // Category ids are generated by Appwrite, so we look the id up by name.
+  // No match (or categories not loaded yet) -> Search opens unfiltered.
+  const handleOfferPress = (categoryName?: string) => {
+    const category = categories?.find(
+      (c) => c.name.toLowerCase() === categoryName?.toLowerCase(),
     );
+
+    router.push({
+      pathname: "/search",
+      params: { category: category?.$id ?? "", query: "" },
+    });
+  };
+
+  return (
+    <SafeAreaView className="flex-1 bg-white">
+      <FlatList
+        data={offers}
+        keyExtractor={(item, index) => item.id?.toString() ?? index.toString()}
+        contentContainerClassName="pb-28 px-5"
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={() => (
+          <View className="flex-between flex-row w-full my-5 items-center">
+            <View className="flex-start max-w-[75%]">
+              <Text className="small-bold text-primary tracking-wider uppercase">
+                Deliver to
+              </Text>
+
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setIsAddressModalVisible(true)}
+                className="flex-row items-center gap-x-1.5 mt-0.5"
+              >
+                {displayLabel && (
+                  <View className="bg-primary/10 px-1.5 py-0.5 rounded-md">
+                    <Text className="text-xs font-bold text-primary">
+                      {displayLabel}
+                    </Text>
+                  </View>
+                )}
+
+                <Text
+                  className={cn(
+                    "paragraph-bold",
+                    hasAnyAddress ? "text-dark-100" : "text-gray-400",
+                  )}
+                  numberOfLines={1}
+                >
+                  {displayText}
+                </Text>
+
+                <Image
+                  source={images.arrowDown}
+                  className="size-3 ml-0.5"
+                  resizeMode="contain"
+                  tintColor={hasAnyAddress ? "#181C2E" : "#878787"}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <CartButton />
+          </View>
+        )}
+        renderItem={({ item, index }) => {
+          const isEven = index % 2 === 0;
+
+          return (
+            <View className="mb-4">
+              <Pressable
+                onPress={() => handleOfferPress(item.category)}
+                className={cn(
+                  "offer-card overflow-hidden rounded-2xl",
+                  isEven ? "flex-row-reverse" : "flex-row",
+                )}
+                style={{ backgroundColor: item.color }}
+                android_ripple={{ color: "#ffffff22" }}
+              >
+                {({ pressed }) => (
+                  <Fragment>
+                    <View className="h-full w-1/2">
+                      <Image
+                        source={item.image}
+                        className="size-full"
+                        resizeMode="contain"
+                      />
+                    </View>
+
+                    <View
+                      className={cn(
+                        "offer-card__info flex-1 justify-center",
+                        isEven ? "pl-6 pr-4" : "pl-4 pr-6",
+                      )}
+                    >
+                      <Text className="h1-bold text-white leading-tight">
+                        {item.title}
+                      </Text>
+                      <Image
+                        source={images.arrowRight}
+                        className="size-8 mt-2"
+                        resizeMode="contain"
+                        tintColor="#ffffff"
+                      />
+                    </View>
+                  </Fragment>
+                )}
+              </Pressable>
+            </View>
+          );
+        }}
+      />
+
+      {/* Modal selecție adresă */}
+      <Modal
+        visible={isAddressModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsAddressModalVisible(false)}
+      >
+        <Pressable
+          className="flex-1 bg-black/50 justify-end"
+          onPress={() => setIsAddressModalVisible(false)}
+        >
+          <Pressable
+            className="bg-white rounded-t-3xl px-5 pt-3 pb-10"
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View className="w-10 h-1 rounded-full bg-black/10 self-center mb-5" />
+
+            <Text className="h3-bold text-dark-100 mb-4">
+              Select Delivery Address
+            </Text>
+
+            <View className="gap-3">
+              {addressOptions.map((opt) => {
+                const isSelected =
+                  selectedAddressType === opt.type && Boolean(opt.address);
+                const hasAddress = Boolean(opt.address);
+
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      if (hasAddress) {
+                        setSelectedAddressType(opt.type);
+                        setIsAddressModalVisible(false);
+                      } else {
+                        setIsAddressModalVisible(false);
+                        router.push("/edit-profile");
+                      }
+                    }}
+                    className={cn(
+                      "flex-row items-center justify-between p-4 rounded-2xl border",
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-gray-100 bg-white",
+                    )}
+                  >
+                    <View className="flex-row items-center gap-3 flex-1 mr-2">
+                      <Image
+                        source={opt.icon}
+                        className="size-5"
+                        resizeMode="contain"
+                        tintColor={isSelected ? "#FE8C00" : "#878787"}
+                      />
+                      <View className="flex-1">
+                        <Text className="paragraph-bold text-dark-100">
+                          {opt.type}
+                        </Text>
+                        <Text
+                          className="body-regular text-gray-400 mt-0.5"
+                          numberOfLines={1}
+                        >
+                          {opt.address || "Tap to set this address"}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {isSelected && (
+                      <View className="size-3.5 rounded-full bg-primary" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                setIsAddressModalVisible(false);
+                router.push("/edit-profile");
+              }}
+              className="mt-5 py-3 items-center"
+            >
+              <Text className="paragraph-bold text-primary">
+                + Manage Addresses in Profile
+              </Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </SafeAreaView>
+  );
 }
