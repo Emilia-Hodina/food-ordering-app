@@ -136,4 +136,20 @@
     .small-bold {
         @apply text-xs font-quicksand-bold;
     }
+
+    .option-card {
+        @apply relative w-24 h-28 mr-4;
+    }
+
+    .option-card__image {
+        @apply absolute top-0 inset-x-0 h-20 z-10 flex items-center justify-center bg-white rounded-2xl shadow-md shadow-black/10;
+    }
+
+    .option-card__label {
+        @apply absolute bottom-0 inset-x-0 h-14 px-2 pb-2 flex flex-row items-end justify-between gap-x-1 bg-dark-100 rounded-2xl;
+    }
+
+    .option-card__action {
+        @apply size-5 rounded-full flex items-center justify-center;
+    }
 }

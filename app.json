@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "fooddeliveryapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
@@ -16,7 +15,6 @@
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/adaptive-icon.png"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -26,6 +24,13 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.fooddeliveryapp",
+          "enableGooglePay": true
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -46,7 +51,12 @@
           "organization": "em-mf"
         }
       ],
-      "@sentry/react-native"
+      "@sentry/react-native",
+      "expo-font",
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser",
+      "@stripe/stripe-react-native"
     ],
     "experiments": {
       "typedRoutes": true,
